@@ -87,6 +87,10 @@
                                     <select class="form-select" id="station" name="station" required disabled>
                                         <option value="">-- Select Station --</option>
                                     </select>
+                                    <div class="mt-2">
+                                        <label for="category" class="form-label small">Category</label>
+                                        <input type="text" id="category" class="form-control form-control-sm" readonly placeholder="Auto-filled from Station Master">
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="month" class="form-label">AMC Month <span class="text-danger">*</span></label>
@@ -179,21 +183,41 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Apps Script endpoint (used for GET stations, duplicate check and POST upload)
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOy6zO5YhEW26iY9h-8haUPJbT-09zdVmYtEfcIm-k5g1F-56Ejv7ipr190JH3-xE0/exec';
         // Global station data
         let stationData = [];
 
-        // Load station master data on page load
-        async function loadStationData() {
+        // Load station master data via JSONP (Apps Script must return handleStationData([...]))
+        function loadStationData() {
+            // remove any existing script tag with the same id
+            const existing = document.getElementById('stations-jsonp');
+            if (existing) existing.remove();
+
+            const script = document.createElement('script');
+            script.id = 'stations-jsonp';
+            script.src = APPS_SCRIPT_URL + '?action=stations&callback=handleStationData';
+            script.async = true;
+
+            script.onerror = function() {
+                console.error('JSONP script failed to load station data');
+                showError('Failed to load station data. Please ensure the Apps Script endpoint supports JSONP (callback=handleStationData).');
+            };
+
+            document.head.appendChild(script);
+        }
+
+        // Global JSONP callback used by Apps Script: handleStationData([...])
+        window.handleStationData = function(data) {
             try {
-                const response = await fetch('data/station_master.json');
-                stationData = await response.json();
+                stationData = data || [];
                 populateZones();
                 populateMonths();
-            } catch (error) {
-                console.error('Error loading station data:', error);
-                showError('Failed to load station data. Please refresh the page.');
+            } catch (err) {
+                console.error('handleStationData error:', err);
+                showError('Error processing station data.');
             }
-        }
+        };
 
         // Populate zones dropdown
         function populateZones() {
@@ -286,6 +310,104 @@
             }
         });
 
+        // When a station is selected, auto-fill category and trigger duplicate check if month selected
+        document.getElementById('station').addEventListener('change', function() {
+            const stationName = this.value;
+            const month = document.getElementById('month').value;
+            const categoryInput = document.getElementById('category');
+
+            if (stationName) {
+                const stationObj = stationData.find(s => s['StationName'] === stationName);
+                categoryInput.value = stationObj ? (stationObj['Category'] || '') : '';
+            } else {
+                categoryInput.value = '';
+            }
+
+            // If both station and month selected, check for duplicate
+            if (stationName && month) {
+                checkDuplicate(stationName, month);
+            } else {
+                // enable submit if nothing blocking
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+
+        // When month changes, if station already selected, run duplicate check
+        document.getElementById('month').addEventListener('change', function() {
+            const month = this.value;
+            const stationName = document.getElementById('station').value;
+
+            if (stationName && month) {
+                checkDuplicate(stationName, month);
+            } else {
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+
+        // Check for existing AMC submission for station+period using JSONP
+        function checkDuplicate(station, period) {
+            const submitBtn = document.getElementById('submitBtn');
+            // remove any existing JSONP script
+            const existing = document.getElementById('check-jsonp');
+            if (existing) existing.remove();
+
+            // clear any previous duplicate error
+            const errorAlert = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+
+            // create script tag for JSONP
+            const script = document.createElement('script');
+            script.id = 'check-jsonp';
+            script.src = APPS_SCRIPT_URL + '?action=check&station=' + encodeURIComponent(station) + '&period=' + encodeURIComponent(period) + '&callback=handleDuplicateCheck';
+            script.async = true;
+
+            // timeout: if JSONP doesn't call back, allow upload
+            const timer = setTimeout(() => {
+                script.remove();
+                try { delete window.handleDuplicateCheck; } catch (e) {}
+                console.error('Duplicate check JSONP timeout');
+                submitBtn.disabled = false;
+            }, 8000);
+
+            script.onerror = function() {
+                clearTimeout(timer);
+                try { delete window.handleDuplicateCheck; } catch (e) {}
+                console.error('Duplicate check JSONP script error');
+                submitBtn.disabled = false;
+            };
+
+            document.head.appendChild(script);
+        }
+
+        // Global JSONP callback for duplicate check: handleDuplicateCheck({exists:true/false})
+        window.handleDuplicateCheck = function(data) {
+            const submitBtn = document.getElementById('submitBtn');
+            const errorAlert = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+
+            try {
+                if (data && data.exists === true) {
+                    submitBtn.disabled = true;
+                    showError('AMC already submitted. Please contact administrator to delete existing record and try again.');
+                } else {
+                    // clear duplicate-related error and enable upload
+                    if (errorText && errorText.textContent && errorText.textContent.includes('AMC already submitted')) {
+                        errorText.textContent = '';
+                        errorAlert.classList.add('d-none');
+                        errorAlert.classList.remove('show');
+                    }
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error('handleDuplicateCheck error:', err);
+                submitBtn.disabled = false;
+            } finally {
+                // cleanup JSONP script
+                const scr = document.getElementById('check-jsonp');
+                if (scr) scr.remove();
+            }
+        };
+
         // Display file information when file is selected
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -350,17 +472,15 @@
                 zone: document.getElementById('zone').value,
                 division: document.getElementById('division').value,
                 station: document.getElementById('station').value,
+                category: document.getElementById('category').value,
                 month: document.getElementById('month').value,
                 remarks: document.getElementById('remarks').value.trim(),
                 fileName: file.name,
                 fileType: file.type || 'application/octet-stream',
                 fileBase64: fileBase64
             };
-
-            const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbzOy6zO5YhEW26iY9h-8haUPJbT-09zdVmYtEfcIm-k5g1F-56Ejv7ipr190JH3-xE0/exec';
-
             try {
-                await fetch(appsScriptUrl, {
+                await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify(payload)
