@@ -1,1 +1,177 @@
-
+[
+  {
+    "StationName": "Komatipalli",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Vizianagaram",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Visakhapatnam",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Duvvada",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Anakapalli",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Rayagada",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Koraput",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Jeypore",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Malkangiri",
+    "Division": "Waltair",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Paradeep",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Cuttack",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Khordha Road",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Bhubaneswar",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Puri",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Balangir",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Sambalpur",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Rourkela",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Barbil",
+    "Division": "Sambalpur",
+    "Zonal Railways": "ECOR"
+  },
+  {
+    "StationName": "Noamundi",
+    "Division": "Adra",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Tatanagar",
+    "Division": "Adra",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Kharagpur",
+    "Division": "Kharagpur",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Midnapore",
+    "Division": "Kharagpur",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Medinipur",
+    "Division": "Kharagpur",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Balasore",
+    "Division": "Kharagpur",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Baripada",
+    "Division": "Kharagpur",
+    "Zonal Railways": "ER"
+  },
+  {
+    "StationName": "Chennai Central",
+    "Division": "Chennai Central",
+    "Zonal Railways": "SR"
+  },
+  {
+    "StationName": "Tambaram",
+    "Division": "Chennai Central",
+    "Zonal Railways": "SR"
+  },
+  {
+    "StationName": "Chengalpattu",
+    "Division": "Chennai Central",
+    "Zonal Railways": "SR"
+  },
+  {
+    "StationName": "Kanchipuram",
+    "Division": "Chennai Central",
+    "Zonal Railways": "SR"
+  },
+  {
+    "StationName": "Vellore",
+    "Division": "Chennai Central",
+    "Zonal Railways": "SR"
+  },
+  {
+    "StationName": "Bengaluru City",
+    "Division": "Bengaluru",
+    "Zonal Railways": "SWR"
+  },
+  {
+    "StationName": "Yeshwantpur",
+    "Division": "Bengaluru",
+    "Zonal Railways": "SWR"
+  },
+  {
+    "StationName": "Kengeri",
+    "Division": "Bengaluru",
+    "Zonal Railways": "SWR"
+  },
+  {
+    "StationName": "Raichur",
+    "Division": "Bengaluru",
+    "Zonal Railways": "SWR"
+  },
+  {
+    "StationName": "Bellary",
+    "Division": "Bengaluru",
+    "Zonal Railways": "SWR"
+  }
+]
