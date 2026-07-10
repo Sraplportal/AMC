@@ -197,7 +197,6 @@
                     <p>Acknowledgement No:<br><strong id="successAckId"></strong></p>
                     <p>Station: <strong id="successStation"></strong></p>
                     <p>AMC Period: <strong id="successPeriod"></strong></p>
-                    <p>Please save the acknowledgement number for future reference.</p>
                     <p>Thank you.</p>
                 </div>
                 <div class="modal-footer">
@@ -475,7 +474,8 @@
         function showSuccessModal(ackId) {
             if (successModal) {
                 const selectedStation = document.getElementById('station').value;
-                const selectedMonth = document.getElementById('month').value;
+                const monthSelect = document.getElementById('month');
+                const selectedMonth = monthSelect.options[monthSelect.selectedIndex]?.text || monthSelect.value || 'N/A';
 
                 document.getElementById('successAckId').textContent = ackId || 'N/A';
                 document.getElementById('successStation').textContent = selectedStation || 'N/A';
@@ -702,6 +702,7 @@
                 return;
             }
 
+            const ackId = buildAcknowledgementId(document.getElementById('station').value);
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Uploading...';
 
@@ -711,7 +712,7 @@
             } catch (error) {
                 showError('Unable to read the selected file. Please try again.');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload Checklist';
+                submitBtn.innerHTML = 'Submit Checklist';
                 return;
             }
 
@@ -727,54 +728,47 @@
                 remarks: document.getElementById('remarks').value.trim(),
                 fileName: file.name,
                 fileType: file.type || 'application/octet-stream',
-                fileBase64: fileBase64
+                fileBase64: fileBase64,
+                ackId: ackId
             };
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok && response.type !== 'opaque') {
+                if (!response.ok) {
                     throw new Error('Upload failed. Please try again.');
                 }
 
-                const ackId = buildAcknowledgementId(document.getElementById('station').value);
+                const result = await response.json();
+                if (!result || result.success !== true) {
+                    const message = result && result.message ? result.message : 'Upload failed. Please try again.';
+                    throw new Error(message);
+                }
+
                 successResetPending = true;
                 showSuccess(ackId);
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload Checklist';
             } catch (error) {
-                showError('Upload failed. Please try again.');
+                showError(error.message || 'Upload failed. Please try again.');
+            } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload Checklist';
+                submitBtn.innerHTML = 'Submit Checklist';
             }
         });
 
         function showSuccess(ackId) {
-            const successAlert = document.getElementById('successMessage');
-            const errorAlert = document.getElementById('errorMessage');
-
             hideDuplicateModal();
-            showSuccessModal(ackId);
-
-            if (!successAlert.classList.contains('show')) {
-                successAlert.classList.remove('d-none');
-                successAlert.classList.add('show');
-            }
-
-            if (!errorAlert.classList.contains('d-none')) {
+            const errorAlert = document.getElementById('errorMessage');
+            if (errorAlert && !errorAlert.classList.contains('d-none')) {
                 errorAlert.classList.add('d-none');
                 errorAlert.classList.remove('show');
             }
-
-            successAlert.scrollIntoView({ behavior: 'smooth' });
-
-            setTimeout(() => {
-                successAlert.classList.remove('show');
-                successAlert.classList.add('d-none');
-            }, 5000);
+            showSuccessModal(ackId);
         }
 
         function showError(message) {
