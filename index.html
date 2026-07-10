@@ -88,18 +88,21 @@
                 </div>
                 <div class="card-panel-body upload-grid">
                     <div class="upload-column">
-                        <label for="month" class="form-label">AMC Period</label>
+                        <label for="month" class="form-label">AMC Period <span class="text-danger">*</span></label>
                         <select class="form-select" id="month" name="month" required>
                             <option value="">-- Select Month --</option>
                         </select>
+                        <div class="invalid-feedback" id="monthError"></div>
                     </div>
                     <div class="upload-column">
                         <label for="maintenanceDate" class="form-label">Maintenance Done Date <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="maintenanceDate" name="maintenanceDate" required>
+                        <div class="invalid-feedback" id="maintenanceDateError"></div>
                     </div>
 
                     <div class="upload-column upload-area">
-                        <div class="file-upload-box">
+                        <label class="form-label">Upload Checklist <span class="text-danger">*</span></label>
+                        <div class="file-upload-box" id="fileUploadBox">
                             <label class="drop-zone" for="fileInput">
                                 <div>
                                     <h6>Drag & drop your file here</h6>
@@ -111,6 +114,7 @@
                             </label>
                             <input type="file" class="form-control file-input-hidden" id="fileInput" name="file" accept=".pdf,application/pdf" required>
                         </div>
+                        <div class="invalid-feedback" id="fileInputError"></div>
                         <div id="fileInfo" class="file-info-card" style="display: none;">
                             <div>
                                 <div class="text-muted small">Selected file</div>
@@ -185,13 +189,16 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="successModalLabel">Submission Successful</h5>
+                    <h5 class="modal-title" id="successModalLabel">AMC Checklist Submitted Successfully</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>AMC Checklist Submitted Successfully.</p>
-                    <p>Your submission has been received.</p>
-                    <p>You will receive an acknowledgement email shortly.</p>
+                    <p>Your AMC checklist has been received successfully.</p>
+                    <p>Acknowledgement No:<br><strong id="successAckId"></strong></p>
+                    <p>Station: <strong id="successStation"></strong></p>
+                    <p>AMC Period: <strong id="successPeriod"></strong></p>
+                    <p>Please save the acknowledgement number for future reference.</p>
+                    <p>Thank you.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
@@ -456,10 +463,118 @@
             }
         }
 
-        function showSuccessModal() {
+        function buildAcknowledgementId(stationName) {
+            const now = new Date();
+            const pad = value => String(value).padStart(2, '0');
+            const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+            const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+            const stationCode = stationName ? stationName.toString().trim().replace(/\s+/g, '').toUpperCase() : 'UNKNOWN';
+            return `AMC-${date}-${time}-${stationCode}`;
+        }
+
+        function showSuccessModal(ackId) {
             if (successModal) {
+                const selectedStation = document.getElementById('station').value;
+                const selectedMonth = document.getElementById('month').value;
+
+                document.getElementById('successAckId').textContent = ackId || 'N/A';
+                document.getElementById('successStation').textContent = selectedStation || 'N/A';
+                document.getElementById('successPeriod').textContent = selectedMonth || 'N/A';
+
                 successModal.show();
             }
+        }
+
+        let successResetPending = false;
+        if (successModalElement) {
+            successModalElement.addEventListener('shown.bs.modal', function() {
+                if (successResetPending) {
+                    document.getElementById('uploadForm').reset();
+                    document.getElementById('fileInfo').style.display = 'none';
+                    document.getElementById('division').disabled = true;
+                    document.getElementById('station').disabled = true;
+                    clearAllValidation();
+                    successResetPending = false;
+                }
+            });
+        }
+
+        function clearFieldValidation(inputElement, errorId) {
+            if (!inputElement) return;
+            const errorElement = document.getElementById(errorId);
+            if (inputElement.classList.contains('is-invalid')) {
+                inputElement.classList.remove('is-invalid');
+            }
+            if (errorElement) {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }
+        }
+
+        function clearFileValidation() {
+            const fileUploadBox = document.getElementById('fileUploadBox');
+            const errorElement = document.getElementById('fileInputError');
+            if (fileUploadBox && fileUploadBox.classList.contains('invalid')) {
+                fileUploadBox.classList.remove('invalid');
+            }
+            if (errorElement) {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }
+        }
+
+        function clearAllValidation() {
+            clearFieldValidation(document.getElementById('month'), 'monthError');
+            clearFieldValidation(document.getElementById('maintenanceDate'), 'maintenanceDateError');
+            clearFileValidation();
+        }
+
+        function showFieldError(inputElement, errorId, message) {
+            if (!inputElement) return;
+            const errorElement = document.getElementById(errorId);
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+            inputElement.classList.add('is-invalid');
+        }
+
+        function showFileError(message) {
+            const fileUploadBox = document.getElementById('fileUploadBox');
+            const errorElement = document.getElementById('fileInputError');
+            if (fileUploadBox) {
+                fileUploadBox.classList.add('invalid');
+            }
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function validateRequiredFields() {
+            clearAllValidation();
+
+            let valid = true;
+            const month = document.getElementById('month');
+            const maintenanceDate = document.getElementById('maintenanceDate');
+            const fileInput = document.getElementById('fileInput');
+
+            if (!month.value) {
+                showFieldError(month, 'monthError', 'Please select AMC period');
+                valid = false;
+            }
+
+            if (!maintenanceDate.value) {
+                showFieldError(maintenanceDate, 'maintenanceDateError', 'Please select maintenance done date');
+                valid = false;
+            }
+
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                showFileError('Please upload AMC checklist file');
+                valid = false;
+            }
+
+            return valid;
         }
 
         // Global JSONP callback for duplicate check: handleDuplicateCheck({exists:true/false})
@@ -497,6 +612,7 @@
 
         // Display file information when file is selected
         document.getElementById('fileInput').addEventListener('change', function(e) {
+            clearFileValidation();
             const file = e.target.files[0];
             if (file) {
                 if (!isPdfFile(file)) {
@@ -510,6 +626,14 @@
             } else {
                 document.getElementById('fileInfo').style.display = 'none';
             }
+        });
+
+        document.getElementById('month').addEventListener('change', function() {
+            clearFieldValidation(this, 'monthError');
+        });
+
+        document.getElementById('maintenanceDate').addEventListener('change', function() {
+            clearFieldValidation(this, 'maintenanceDateError');
         });
 
         document.getElementById('uploadForm').addEventListener('reset', function() {
@@ -529,6 +653,7 @@
                 successAlert.classList.add('d-none');
                 successAlert.classList.remove('show');
             }
+            clearAllValidation();
         });
 
         async function readFileAsBase64(file) {
@@ -548,6 +673,10 @@
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
+            if (!validateRequiredFields()) {
+                return;
+            }
+
             if (duplicateBlocked === true) {
                 showDuplicateModal();
                 return;
@@ -558,7 +687,7 @@
             const file = fileInput.files[0];
 
             if (!file) {
-                showError('Please select a file to upload.');
+                showError('Please upload AMC checklist file');
                 return;
             }
 
@@ -601,28 +730,34 @@
                 fileBase64: fileBase64
             };
             try {
-                await fetch(APPS_SCRIPT_URL, {
+                const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify(payload)
                 });
 
-                showSuccess();
+                if (!response.ok && response.type !== 'opaque') {
+                    throw new Error('Upload failed. Please try again.');
+                }
+
+                const ackId = buildAcknowledgementId(document.getElementById('station').value);
+                successResetPending = true;
+                showSuccess(ackId);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload Checklist';
             } catch (error) {
-                showError('An error occurred during upload: ' + error.message);
+                showError('Upload failed. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload Checklist';
             }
         });
 
-        function showSuccess() {
+        function showSuccess(ackId) {
             const successAlert = document.getElementById('successMessage');
             const errorAlert = document.getElementById('errorMessage');
 
             hideDuplicateModal();
-            showSuccessModal();
+            showSuccessModal(ackId);
 
             if (!successAlert.classList.contains('show')) {
                 successAlert.classList.remove('d-none');
@@ -633,11 +768,6 @@
                 errorAlert.classList.add('d-none');
                 errorAlert.classList.remove('show');
             }
-
-            document.getElementById('uploadForm').reset();
-            document.getElementById('fileInfo').style.display = 'none';
-            document.getElementById('division').disabled = true;
-            document.getElementById('station').disabled = true;
 
             successAlert.scrollIntoView({ behavior: 'smooth' });
 
