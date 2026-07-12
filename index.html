@@ -10,20 +10,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="style.css?v=20260712-1">
 </head>
 <body>
     <div class="page-backdrop" aria-hidden="true"></div>
     <header class="topbar">
         <div class="topbar-left">
-            <div class="brand-mark">SIEMENS</div>
-            
+            <div class="topbar-title">SIEMENS</div>
         </div>
         <div class="topbar-center">
-            <div class="topbar-title">SRPAL AMC Portal</div>
-            <div class="topbar-subtitle">AMC Checklist Submission Portal</div>
+            <div class="topbar-title">AMC Portal</div>
+            <div class="topbar-subtitle">Please ensure all submitted AMC details are complete and accurate</div>
         </div>
-            </header>
+        <div class="topbar-right"></div>
+    </header>
 
     <main class="page-shell">
         <section class="hero-panel">
@@ -69,7 +69,6 @@
             <article class="card-panel card-station">
                 <div class="card-panel-header">
                     <h5>Station Details</h5>
-                    <span class="badge badge-success">AMC Ready</span>
                 </div>
                 <div class="card-panel-body">
                     <div class="mb-4">
@@ -111,10 +110,13 @@
                 </div>
                 <div class="card-panel-body upload-grid">
                     <div class="upload-column">
-                        <label for="month" class="form-label">AMC Period <span class="text-danger">*</span></label>
-                        <select class="form-select" id="month" name="month" required>
-                            <option value="">-- Select Month --</option>
-                        </select>
+                        <label for="month" class="form-label">Maintenance Period <span class="text-danger">*</span></label>
+                        <div class="maintenance-period-controls">
+                            <select class="form-select" id="maintenanceYear" aria-label="Maintenance year"></select>
+                            <select class="form-select" id="month" name="month" required>
+                                <option value="">-- Select Month --</option>
+                            </select>
+                        </div>
                         <div class="invalid-feedback" id="monthError"></div>
                     </div>
                     <div class="upload-column">
@@ -185,7 +187,7 @@
     </main>
 
     <footer class="page-footer">
-        <div>&copy; 2026 SRPAL AMC Portal. All rights reserved.</div>
+        <div>&copy; 2026 SIEMENS AMC Portal. All rights reserved.</div>
     </footer>
 
     <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
@@ -273,6 +275,7 @@
             try {
                 stationData = data || [];
                 populateZones();
+                populateMaintenanceYears();
                 populateMonths();
             } catch (err) {
                 console.error('handleStationData error:', err);
@@ -293,16 +296,33 @@
             });
         }
 
-        // Populate AMC months
+        // Populate maintenance years around the current system year.
+        function populateMaintenanceYears() {
+            const yearSelect = document.getElementById('maintenanceYear');
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = '';
+
+            for (let year = currentYear - 2; year <= currentYear + 2; year++) {
+                const option = document.createElement('option');
+                option.value = String(year);
+                option.textContent = String(year);
+                option.selected = year === currentYear;
+                yearSelect.appendChild(option);
+            }
+        }
+
+        // Populate month names while preserving the YYYY_Month backend value.
         function populateMonths() {
             const monthSelect = document.getElementById('month');
-            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('maintenanceYear');
+            const selectedYear = yearSelect.value || String(new Date().getFullYear());
             const months = ['January', 'February', 'March', 'April', 'May', 'June',
                           'July', 'August', 'September', 'October', 'November', 'December'];
-            
+
+            monthSelect.innerHTML = '<option value="">-- Select Month --</option>';
             months.forEach((month, index) => {
                 const option = document.createElement('option');
-                option.value = `${currentYear}_${month}`;
+                option.value = `${selectedYear}_${month}`;
                 option.textContent = month;
                 monthSelect.appendChild(option);
             });
@@ -625,6 +645,10 @@
             }
         }
 
+        function getTodayDateValue() {
+            return new Date().toISOString().split('T')[0];
+        }
+
         function validateRequiredFields() {
             clearAllValidation();
 
@@ -651,6 +675,9 @@
 
             if (!maintenanceDate.value) {
                 showFieldError(maintenanceDate, 'maintenanceDateError', 'Please select maintenance done date');
+                valid = false;
+            } else if (maintenanceDate.value > getTodayDateValue()) {
+                showFieldError(maintenanceDate, 'maintenanceDateError', 'Maintenance done date cannot be a future date.');
                 valid = false;
             }
 
@@ -740,6 +767,23 @@
             clearFieldValidation(this, 'monthError');
         });
 
+        document.getElementById('maintenanceYear').addEventListener('change', function() {
+            const monthSelect = document.getElementById('month');
+            const selectedMonth = monthSelect.selectedIndex > 0
+                ? monthSelect.options[monthSelect.selectedIndex].textContent
+                : '';
+
+            Array.from(monthSelect.options).forEach(function(option, index) {
+                if (index > 0) {
+                    option.value = `${this.value}_${option.textContent}`;
+                }
+            }, this);
+
+            if (selectedMonth) {
+                monthSelect.dispatchEvent(new Event('change'));
+            }
+        });
+
         document.getElementById('email').addEventListener('input', function() {
             if (this.value.trim()) {
                 clearFieldValidation(this, 'emailError');
@@ -747,7 +791,11 @@
         });
 
         document.getElementById('maintenanceDate').addEventListener('change', function() {
-            clearFieldValidation(this, 'maintenanceDateError');
+            if (this.value && this.value > getTodayDateValue()) {
+                showFieldError(this, 'maintenanceDateError', 'Maintenance done date cannot be a future date.');
+            } else {
+                clearFieldValidation(this, 'maintenanceDateError');
+            }
         });
 
         document.getElementById('uploadForm').addEventListener('reset', function() {
@@ -904,6 +952,7 @@ document.getElementById('remarks')
 
 // Load station data
 window.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('maintenanceDate').max = getTodayDateValue();
     showEnvironmentNotice();
     loadStationData();
 });
